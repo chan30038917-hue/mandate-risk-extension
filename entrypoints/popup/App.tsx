@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { getHealthFactor, getRiskLevel } from '../../src/utils/risk';
+import { getCurvanceHealth } from '../../src/utils/curvance';
 
 interface WalletData {
   address: string;
-  healthFactor: number;
+  aaveHF: number;
+  curvancePositions: { marketManager: string; lFactor: number; debt: number }[];
   riskLevel: 'safe' | 'warning' | 'critical';
 }
 
@@ -22,12 +24,28 @@ export default function App() {
     });
   }, []);
 
+  const fetchWalletData = async (address: string): Promise<WalletData> => {
+    const aaveHF = await getHealthFactor(address);
+    const curvancePositions = await getCurvanceHealth(address);
+    
+    // Determine worst risk level
+    const aaveLevel = getRiskLevel(aaveHF);
+    let curvanceLevel: 'safe' | 'warning' | 'critical' = 'safe';
+    for (const pos of curvancePositions) {
+      if (pos.lFactor >= 0.8) curvanceLevel = 'critical';
+      else if (pos.lFactor >= 0.5 && curvanceLevel !== 'critical') curvanceLevel = 'warning';
+    }
+
+    let riskLevel: 'safe' | 'warning' | 'critical' = 'safe';
+    if (aaveLevel === 'critical' || curvanceLevel === 'critical') riskLevel = 'critical';
+    else if (aaveLevel === 'warning' || curvanceLevel === 'warning') riskLevel = 'warning';
+
+    return { address, aaveHF, curvancePositions, riskLevel };
+  };
+
   const refreshAllWallets = async (walletList: WalletData[]) => {
     const updated = await Promise.all(
-      walletList.map(async (w) => {
-        const hf = await getHealthFactor(w.address);
-        return { ...w, healthFactor: hf, riskLevel: getRiskLevel(hf) };
-      })
+      walletList.map((w) => fetchWalletData(w.address))
     );
     setWallets(updated);
     chrome.storage.local.set({ wallets: updated });
@@ -44,12 +62,7 @@ export default function App() {
       return;
     }
     setLoading(true);
-    const hf = await getHealthFactor(newWallet);
-    const newData: WalletData = {
-      address: newWallet,
-      healthFactor: hf,
-      riskLevel: getRiskLevel(hf),
-    };
+    const newData = await fetchWalletData(newWallet);
     const updated = [...wallets, newData];
     setWallets(updated);
     chrome.storage.local.set({ wallets: updated });
@@ -81,9 +94,14 @@ export default function App() {
     return 'SEGURO';
   };
 
+  const getAaveLabel = (hf: number) => {
+    if (hf > 100) return 'Sin deuda';
+    return hf.toFixed(4);
+  };
+
   return (
     <div style={{
-      width: '360px',
+      width: '380px',
       minHeight: '500px',
       padding: '24px',
       background: 'linear-gradient(180deg, #0a0a0f 0%, #0d0a1a 100%)',
@@ -91,28 +109,15 @@ export default function App() {
       fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
       boxSizing: 'border-box',
     }}>
-      {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-        <div style={{
-          fontSize: '19px',
-          fontWeight: 600,
-          marginBottom: '6px',
-          letterSpacing: '-0.3px',
-        }}>
+        <div style={{ fontSize: '19px', fontWeight: 600, marginBottom: '6px', letterSpacing: '-0.3px' }}>
           Mandate Risk Monitor
         </div>
-        <div style={{
-          fontSize: '10px',
-          color: '#836EF9',
-          letterSpacing: '1.2px',
-          textTransform: 'uppercase',
-          fontWeight: 500,
-        }}>
-          Aave V3 · Monad Mainnet
+        <div style={{ fontSize: '10px', color: '#836EF9', letterSpacing: '1.2px', textTransform: 'uppercase', fontWeight: 500 }}>
+          Aave V3 · Curvance · Monad
         </div>
       </div>
 
-      {/* Wallet List */}
       {wallets.length > 0 && (
         <div style={{ marginBottom: '20px' }}>
           {wallets.map((w) => (
@@ -123,81 +128,59 @@ export default function App() {
               padding: '16px',
               marginBottom: '10px',
             }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '12px',
-              }}>
-                <span style={{
-                  fontSize: '12px',
-                  color: '#a78bfa',
-                  fontFamily: '"JetBrains Mono", "SF Mono", Monaco, monospace',
-                  fontWeight: 500,
-                }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ fontSize: '12px', color: '#a78bfa', fontFamily: '"JetBrains Mono", monospace', fontWeight: 500 }}>
                   {w.address.slice(0, 6)}...{w.address.slice(-4)}
                 </span>
                 <button
                   onClick={() => handleRemoveWallet(w.address)}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#555',
-                    fontSize: '20px',
-                    cursor: 'pointer',
-                    padding: '0',
-                    width: '20px',
-                    height: '20px',
-                    lineHeight: '1',
-                  }}
+                  style={{ background: 'transparent', border: 'none', color: '#555', fontSize: '20px', cursor: 'pointer', padding: 0, width: '20px', height: '20px', lineHeight: '1' }}
                 >
                   ×
                 </button>
               </div>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-end',
-              }}>
-                <div>
-                  <div style={{
-                    fontSize: '9px',
-                    color: '#666',
-                    letterSpacing: '0.5px',
-                    textTransform: 'uppercase',
-                    marginBottom: '4px',
-                    fontWeight: 500,
-                  }}>
-                    Health Factor
-                  </div>
-                  <span style={{
-                    fontSize: '26px',
-                    fontWeight: 700,
-                    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, monospace',
-                    color: getRiskColor(w.riskLevel),
-                    letterSpacing: '-0.5px',
-                  }}>
-                    {w.healthFactor > 100 ? 'N/A' : w.healthFactor.toFixed(4)}
+
+              {/* Aave */}
+              <div style={{ marginBottom: w.curvancePositions.length > 0 ? '10px' : '0' }}>
+                <div style={{ fontSize: '9px', color: '#666', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 500 }}>
+                  Aave V3
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '20px', fontWeight: 700, fontFamily: '"JetBrains Mono", monospace', color: getRiskColor(getRiskLevel(w.aaveHF)) }}>
+                    {getAaveLabel(w.aaveHF)}
+                  </span>
+                  <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '1px', color: getRiskColor(getRiskLevel(w.aaveHF)) }}>
+                    {w.aaveHF > 100 ? '—' : getRiskLabel(getRiskLevel(w.aaveHF))}
                   </span>
                 </div>
-                <span style={{
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  letterSpacing: '1px',
-                  color: getRiskColor(w.riskLevel),
-                  padding: '4px 8px',
-                  border: `1px solid ${getRiskColor(w.riskLevel)}60`,
-                  borderRadius: '6px',
-                }}>
-                  {getRiskLabel(w.riskLevel)}
-                </span>
               </div>
+
+              {/* Curvance */}
+              {w.curvancePositions.length > 0 && (
+                <div>
+                  <div style={{ fontSize: '9px', color: '#666', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 500 }}>
+                    Curvance
+                  </div>
+                  {w.curvancePositions.map((pos, idx) => {
+                    const level = pos.lFactor >= 0.8 ? 'critical' : pos.lFactor >= 0.5 ? 'warning' : 'safe';
+                    return (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '11px', color: '#a78bfa', fontFamily: '"JetBrains Mono", monospace' }}>
+                          {pos.marketManager.slice(0, 6)}...
+                        </span>
+                        <span style={{ fontSize: '16px', fontWeight: 700, fontFamily: '"JetBrains Mono", monospace', color: getRiskColor(level) }}>
+                          {pos.lFactor.toFixed(4)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      {/* Add Wallet */}
       <div style={{ marginBottom: '12px' }}>
         <input
           type="text"
@@ -213,7 +196,7 @@ export default function App() {
             borderRadius: '10px',
             color: '#ffffff',
             fontSize: '12px',
-            fontFamily: '"JetBrains Mono", "SF Mono", Monaco, monospace',
+            fontFamily: '"JetBrains Mono", monospace',
             marginBottom: '12px',
             boxSizing: 'border-box',
             outline: 'none',
@@ -221,17 +204,7 @@ export default function App() {
           }}
         />
         {error && (
-          <div style={{
-            background: 'rgba(239, 68, 68, 0.15)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            color: '#ef4444',
-            fontSize: '11px',
-            padding: '10px',
-            borderRadius: '8px',
-            marginBottom: '12px',
-            textAlign: 'center',
-            fontWeight: 500,
-          }}>
+          <div style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', fontSize: '11px', padding: '10px', borderRadius: '8px', marginBottom: '12px', textAlign: 'center', fontWeight: 500 }}>
             {error}
           </div>
         )}
@@ -249,7 +222,6 @@ export default function App() {
             fontWeight: 600,
             cursor: loading ? 'not-allowed' : 'pointer',
             opacity: loading ? 0.6 : 1,
-            letterSpacing: '-0.2px',
             fontFamily: '"Inter", sans-serif',
           }}
         >
@@ -257,7 +229,6 @@ export default function App() {
         </button>
       </div>
 
-      {/* Refresh */}
       {wallets.length > 0 && (
         <button
           onClick={handleRefresh}
@@ -281,19 +252,12 @@ export default function App() {
         </button>
       )}
 
-      {/* Footer */}
       <div style={{ textAlign: 'center', marginTop: '16px' }}>
         <a
           href="https://monadscan.com/address/0x69a5f9ad4f96ebf0a0c792dd42a01cc5c0102fef"
           target="_blank"
           rel="noreferrer"
-          style={{
-            fontSize: '10px',
-            color: '#555',
-            textDecoration: 'none',
-            fontWeight: 500,
-            letterSpacing: '0.3px',
-          }}
+          style={{ fontSize: '10px', color: '#555', textDecoration: 'none', fontWeight: 500 }}
         >
           Ver contrato en MonadScan
         </a>
