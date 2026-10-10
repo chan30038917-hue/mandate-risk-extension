@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { getHealthFactor, getRiskLevel } from '../../src/utils/risk';
-import './App.css';
 
 interface WalletData {
   address: string;
@@ -14,12 +13,10 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Cargar wallets guardadas al abrir
   useEffect(() => {
     chrome.storage.local.get(['wallets'], async (result) => {
       if (result.wallets && result.wallets.length > 0) {
         setWallets(result.wallets);
-        // Actualizar los health factors al abrir
         await refreshAllWallets(result.wallets);
       }
     });
@@ -38,22 +35,14 @@ export default function App() {
 
   const handleAddWallet = async () => {
     setError('');
-    
     if (!newWallet || !newWallet.startsWith('0x') || newWallet.length !== 42) {
-      setError('Direccion invalida. Debe empezar con 0x y tener 42 caracteres.');
+      setError('Direccion invalida');
       return;
     }
-
     if (wallets.some((w) => w.address.toLowerCase() === newWallet.toLowerCase())) {
-      setError('Esta wallet ya esta en la lista.');
+      setError('Ya esta en la lista');
       return;
     }
-
-    if (wallets.length >= 10) {
-      setError('Maximo 10 wallets por extension.');
-      return;
-    }
-
     setLoading(true);
     const hf = await getHealthFactor(newWallet);
     const newData: WalletData = {
@@ -61,7 +50,6 @@ export default function App() {
       healthFactor: hf,
       riskLevel: getRiskLevel(hf),
     };
-
     const updated = [...wallets, newData];
     setWallets(updated);
     chrome.storage.local.set({ wallets: updated });
@@ -82,9 +70,9 @@ export default function App() {
   };
 
   const getRiskColor = (level: string) => {
-    if (level === 'critical') return '#EF4444';
-    if (level === 'warning') return '#F59E0B';
-    return '#22C55E';
+    if (level === 'critical') return '#ef4444';
+    if (level === 'warning') return '#f59e0b';
+    return '#22c55e';
   };
 
   const getRiskLabel = (level: string) => {
@@ -93,58 +81,114 @@ export default function App() {
     return 'SEGURO';
   };
 
-  // Actualizar badge con el peor caso
-  useEffect(() => {
-    if (wallets.length === 0) {
-      chrome.action.setBadgeText({ text: '' });
-      return;
-    }
-
-    const worst = wallets.reduce((prev, curr) => {
-      if (curr.riskLevel === 'critical') return curr;
-      if (prev.riskLevel === 'critical') return prev;
-      if (curr.riskLevel === 'warning' && prev.riskLevel === 'safe') return curr;
-      return prev;
-    });
-
-    let badgeText = 'OK';
-    let badgeColor = '#22C55E';
-    if (worst.riskLevel === 'critical') { badgeText = '!!'; badgeColor = '#EF4444'; }
-    else if (worst.riskLevel === 'warning') { badgeText = '!'; badgeColor = '#F59E0B'; }
-
-    chrome.action.setBadgeText({ text: badgeText });
-    chrome.action.setBadgeBackgroundColor({ color: badgeColor });
-  }, [wallets]);
-
   return (
-    <div className="app">
-      <div className="header">
-        <h1>Mandate Risk Monitor</h1>
-        <span className="subtitle">Aave V3 · Monad Mainnet</span>
+    <div style={{
+      width: '360px',
+      minHeight: '500px',
+      padding: '24px',
+      background: 'linear-gradient(180deg, #0a0a0f 0%, #0d0a1a 100%)',
+      color: '#ffffff',
+      fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+      boxSizing: 'border-box',
+    }}>
+      {/* Header */}
+      <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+        <div style={{
+          fontSize: '19px',
+          fontWeight: 600,
+          marginBottom: '6px',
+          letterSpacing: '-0.3px',
+        }}>
+          Mandate Risk Monitor
+        </div>
+        <div style={{
+          fontSize: '10px',
+          color: '#836EF9',
+          letterSpacing: '1.2px',
+          textTransform: 'uppercase',
+          fontWeight: 500,
+        }}>
+          Aave V3 · Monad Mainnet
+        </div>
       </div>
 
-      {/* Lista de wallets */}
+      {/* Wallet List */}
       {wallets.length > 0 && (
-        <div className="wallets-list">
+        <div style={{ marginBottom: '20px' }}>
           {wallets.map((w) => (
-            <div key={w.address} className="wallet-card">
-              <div className="wallet-header">
-                <code className="address">
+            <div key={w.address} style={{
+              background: 'rgba(20, 18, 31, 0.8)',
+              border: `1px solid ${getRiskColor(w.riskLevel)}40`,
+              borderRadius: '14px',
+              padding: '16px',
+              marginBottom: '10px',
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '12px',
+              }}>
+                <span style={{
+                  fontSize: '12px',
+                  color: '#a78bfa',
+                  fontFamily: '"JetBrains Mono", "SF Mono", Monaco, monospace',
+                  fontWeight: 500,
+                }}>
                   {w.address.slice(0, 6)}...{w.address.slice(-4)}
-                </code>
+                </span>
                 <button
-                  className="btn-remove"
                   onClick={() => handleRemoveWallet(w.address)}
-                  title="Eliminar"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#555',
+                    fontSize: '20px',
+                    cursor: 'pointer',
+                    padding: '0',
+                    width: '20px',
+                    height: '20px',
+                    lineHeight: '1',
+                  }}
                 >
                   ×
                 </button>
               </div>
-              <div className="wallet-health">
-                <span className="hf-value" style={{ color: getRiskColor(w.riskLevel) }}>
-                  {w.healthFactor > 100 ? 'Sin deuda' : w.healthFactor.toFixed(4)}
-                </span>
-                <span className="hf-label" style={{ color: getRiskColor(w.riskLevel) }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-end',
+              }}>
+                <div>
+                  <div style={{
+                    fontSize: '9px',
+                    color: '#666',
+                    letterSpacing: '0.5px',
+                    textTransform: 'uppercase',
+                    marginBottom: '4px',
+                    fontWeight: 500,
+                  }}>
+                    Health Factor
+                  </div>
+                  <span style={{
+                    fontSize: '26px',
+                    fontWeight: 700,
+                    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, monospace',
+                    color: getRiskColor(w.riskLevel),
+                    letterSpacing: '-0.5px',
+                  }}>
+                    {w.healthFactor > 100 ? 'N/A' : w.healthFactor.toFixed(4)}
+                  </span>
+                </div>
+                <span style={{
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '1px',
+                  color: getRiskColor(w.riskLevel),
+                  padding: '4px 8px',
+                  border: `1px solid ${getRiskColor(w.riskLevel)}60`,
+                  borderRadius: '6px',
+                }}>
                   {getRiskLabel(w.riskLevel)}
                 </span>
               </div>
@@ -153,33 +197,103 @@ export default function App() {
         </div>
       )}
 
-      {/* Formulario para añadir wallet */}
-      <div className="add-section">
+      {/* Add Wallet */}
+      <div style={{ marginBottom: '12px' }}>
         <input
           type="text"
           placeholder="0x..."
           value={newWallet}
           onChange={(e) => setNewWallet(e.target.value)}
-          className="input"
           disabled={loading}
+          style={{
+            width: '100%',
+            padding: '14px',
+            background: '#14121f',
+            border: '1px solid #836EF940',
+            borderRadius: '10px',
+            color: '#ffffff',
+            fontSize: '12px',
+            fontFamily: '"JetBrains Mono", "SF Mono", Monaco, monospace',
+            marginBottom: '12px',
+            boxSizing: 'border-box',
+            outline: 'none',
+            fontWeight: 500,
+          }}
         />
-        {error && <div className="error">{error}</div>}
-        <button onClick={handleAddWallet} disabled={loading} className="btn-primary">
+        {error && (
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.15)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            color: '#ef4444',
+            fontSize: '11px',
+            padding: '10px',
+            borderRadius: '8px',
+            marginBottom: '12px',
+            textAlign: 'center',
+            fontWeight: 500,
+          }}>
+            {error}
+          </div>
+        )}
+        <button
+          onClick={handleAddWallet}
+          disabled={loading}
+          style={{
+            width: '100%',
+            padding: '14px',
+            background: 'linear-gradient(135deg, #836EF9 0%, #6b5ce0 100%)',
+            border: 'none',
+            borderRadius: '10px',
+            color: '#ffffff',
+            fontSize: '13px',
+            fontWeight: 600,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            opacity: loading ? 0.6 : 1,
+            letterSpacing: '-0.2px',
+            fontFamily: '"Inter", sans-serif',
+          }}
+        >
           {loading ? 'Verificando...' : 'Añadir Wallet'}
         </button>
       </div>
 
+      {/* Refresh */}
       {wallets.length > 0 && (
-        <button onClick={handleRefresh} disabled={loading} className="btn-secondary">
+        <button
+          onClick={handleRefresh}
+          disabled={loading}
+          style={{
+            width: '100%',
+            padding: '12px',
+            background: 'transparent',
+            border: '1px solid rgba(131, 110, 249, 0.3)',
+            borderRadius: '10px',
+            color: '#a78bfa',
+            fontSize: '12px',
+            fontWeight: 500,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            opacity: loading ? 0.6 : 1,
+            marginBottom: '16px',
+            fontFamily: '"Inter", sans-serif',
+          }}
+        >
           {loading ? 'Actualizando...' : 'Actualizar Todo'}
         </button>
       )}
 
-      <div className="footer">
+      {/* Footer */}
+      <div style={{ textAlign: 'center', marginTop: '16px' }}>
         <a
           href="https://monadscan.com/address/0x69a5f9ad4f96ebf0a0c792dd42a01cc5c0102fef"
           target="_blank"
           rel="noreferrer"
+          style={{
+            fontSize: '10px',
+            color: '#555',
+            textDecoration: 'none',
+            fontWeight: 500,
+            letterSpacing: '0.3px',
+          }}
         >
           Ver contrato en MonadScan
         </a>
