@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Mandate Risk Monitor",
+  "version": "1.0.0",
+  "description": "Monitorea el riesgo de tus wallets en Aave y Curvance",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://mandate-risk-bot-production.up.railway.app/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Mandate Risk Monitor"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

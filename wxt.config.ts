@@ -7,7 +7,7 @@ export default defineConfig({
     version: '1.0.0',
     permissions: ['storage'],
     host_permissions: [
-      'https://mandate-risk-bot.up.railway.app/*',
+      'https://mandate-risk-bot-production.up.railway.app/*',
     ],
   },
 });
