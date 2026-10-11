@@ -1,11 +1,191 @@
 .app {
-  width: 375px;
-  min-height: 480px;
-  max-height: 600px;
-  padding: 18px;
-  background: linear-gradient(180deg, #0a0a0f 0%, #0d0a1a 100%);
-  color: #e5e5e5;
-  font-family: system-ui, -apple-system, sans-serif;
-  overflow-y: auto;
+  width: 380px;
+  min-height: 500px;
+  padding: 24px;
+  background: #0a0a0f;
+  color: #ffffff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   box-sizing: border-box;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.subtitle {
+  font-size: 10px;
+  color: #836EF9;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+.discord-section {
+  margin-bottom: 20px;
+}
+
+.label {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 6px;
+}
+
+.input {
+  width: 100%;
+  padding: 10px;
+  background: #14121f;
+  border: 1px solid rgba(131, 110, 249, 0.25);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 12px;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #836EF9;
+  box-shadow: 0 0 0 2px rgba(131, 110, 249, 0.2);
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 10px;
+  background: #836EF9;
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #9b86fb;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ===== Wallet cards ===== */
+.wallet-card {
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 8px;
+  border: 1px solid;
+  transition: all 0.3s ease;
+}
+
+.wallet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.wallet-address {
+  font-size: 11px;
+  color: #a78bfa;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.wallet-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.risk-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 2px 8px;
+  border: 1px solid;
+  border-radius: 4px;
+}
+
+.btn-remove {
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.btn-remove:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.wallet-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.hf-label {
+  font-size: 9px;
+  color: #666;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.hf-value {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.hf-description {
+  font-size: 9px;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* ===== Animacion de parpadeo para wallets criticas ===== */
+.critical-pulse {
+  animation: criticalPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes criticalPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+.add-section {
+  margin-top: 12px;
+}
+
+.error {
+  color: #ef4444;
+  font-size: 11px;
+  margin-bottom: 8px;
 }
