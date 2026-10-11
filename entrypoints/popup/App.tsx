@@ -16,13 +16,12 @@ export default function App() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    chrome.storage.local.get(['discordId', 'wallets'], (result) => {
+    chrome.storage.local.get(['discordId'], (result) => {
       if (result.discordId && typeof result.discordId === 'string') {
         setDiscordId(result.discordId);
         setSavedDiscordId(result.discordId);
         fetchWallets(result.discordId);
       }
-      // NO cargar wallets desde storage, siempre desde la API
     });
   }, []);
 
@@ -96,14 +95,31 @@ export default function App() {
   };
 
   const getRiskColor = (hf: number) => {
-    if (!hf || hf > 100) return '#22c55e';
+    if (typeof hf !== 'number' || isNaN(hf)) return '#888888';
+    if (hf > 100) return '#22c55e';
     if (hf < 1.1) return '#ef4444';
     if (hf < 1.5) return '#f59e0b';
     return '#22c55e';
   };
 
+  const getRiskLabel = (hf: number) => {
+    if (typeof hf !== 'number' || isNaN(hf)) return 'SIN DATOS';
+    if (hf > 100) return 'SIN DEUDA';
+    if (hf < 1.1) return 'CRITICO';
+    if (hf < 1.5) return 'PRECAUCION';
+    return 'SEGURO';
+  };
+
+  const getRiskDescription = (hf: number) => {
+    if (typeof hf !== 'number' || isNaN(hf)) return '—';
+    if (hf > 100) return 'Sin posicion';
+    if (hf < 1.1) return 'Liquidacion inminente';
+    if (hf < 1.5) return 'Cerca de liquidacion';
+    return 'Posicion saludable';
+  };
+
   const formatHF = (hf: number) => {
-    if (typeof hf !== 'number' || isNaN(hf)) return 'Sin datos';
+    if (typeof hf !== 'number' || isNaN(hf)) return '—';
     if (hf > 100) return 'Sin deuda';
     return hf.toFixed(4);
   };
@@ -133,12 +149,41 @@ export default function App() {
       </div>
 
       {Array.isArray(wallets) && wallets.map((w) => (
-        <div key={w.address} style={{ background: '#14121f', border: `1px solid ${getRiskColor(w.healthFactor)}40`, borderRadius: '10px', padding: '12px', marginBottom: '8px' }}>
-          <div style={{ fontSize: '11px', color: '#a78bfa', fontFamily: 'monospace', marginBottom: '6px' }}>
-            {w.address?.slice(0, 6) || '????'}...{w.address?.slice(-4) || '????'}
+        <div key={w.address} style={{
+          background: `${getRiskColor(w.healthFactor)}15`,
+          border: `1px solid ${getRiskColor(w.healthFactor)}`,
+          borderRadius: '10px',
+          padding: '12px',
+          marginBottom: '8px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '11px', color: '#a78bfa', fontFamily: 'monospace' }}>
+              {w.address?.slice(0, 6) || '????'}...{w.address?.slice(-4) || '????'}
+            </span>
+            <span style={{
+              fontSize: '9px',
+              fontWeight: 700,
+              letterSpacing: '1px',
+              color: getRiskColor(w.healthFactor),
+              padding: '2px 8px',
+              border: `1px solid ${getRiskColor(w.healthFactor)}`,
+              borderRadius: '4px',
+            }}>
+              {getRiskLabel(w.healthFactor)}
+            </span>
           </div>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: getRiskColor(w.healthFactor) }}>
-            {formatHF(w.healthFactor)}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <div>
+              <div style={{ fontSize: '9px', color: '#666', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '2px' }}>
+                Health Factor
+              </div>
+              <div style={{ fontSize: '22px', fontWeight: 700, color: getRiskColor(w.healthFactor), fontFamily: 'monospace' }}>
+                {formatHF(w.healthFactor)}
+              </div>
+            </div>
+            <div style={{ fontSize: '9px', color: getRiskColor(w.healthFactor), fontWeight: 600, textAlign: 'right' }}>
+              {getRiskDescription(w.healthFactor)}
+            </div>
           </div>
         </div>
       ))}
@@ -148,7 +193,7 @@ export default function App() {
         placeholder="0x..."
         value={newWallet}
         onChange={(e) => setNewWallet(e.target.value)}
-        style={{ width: '100%', padding: '10px', background: '#14121f', border: '1px solid #836EF940', borderRadius: '8px', color: '#fff', fontSize: '12px', marginBottom: '8px', boxSizing: 'border-box' }}
+        style={{ width: '100%', padding: '10px', background: '#14121f', border: '1px solid #836EF940', borderRadius: '8px', color: '#fff', fontSize: '12px', marginBottom: '8px', marginTop: '12px', boxSizing: 'border-box' }}
       />
       {error && <div style={{ color: '#ef4444', fontSize: '11px', marginBottom: '8px' }}>{error}</div>}
       <button
