@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import './App.css';
 
 const API_URL = "https://mandate-risk-bot-production.up.railway.app";
 
@@ -213,13 +214,13 @@ export default function App() {
         return (
           <div
             key={w.address}
+            className={critical ? 'critical-pulse' : ''}
             style={{
               background: `linear-gradient(135deg, ${riskColor}20 0%, ${riskColor}08 100%)`,
               border: `1.5px solid ${riskColor}`,
               borderRadius: '12px',
               padding: '14px',
               marginBottom: '10px',
-              boxShadow: critical ? `0 0 15px ${riskColor}40` : 'none',
             }}
           >
             <div style={{
