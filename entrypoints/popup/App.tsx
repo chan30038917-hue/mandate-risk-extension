@@ -5,7 +5,10 @@ const API_URL = "https://mandate-risk-bot-production.up.railway.app";
 
 interface WalletData {
   address: string;
-  healthFactor: number;
+  aaveHealth: number;
+  curvanceDebt: number;
+  curvanceMarket: string;
+  curvanceError: string | null;
 }
 
 export default function App() {
@@ -40,14 +43,31 @@ export default function App() {
       const walletData: WalletData[] = await Promise.all(
         walletList.map(async (w: any) => {
           const address = typeof w === 'string' ? w : w?.address || '';
+
+          let aaveHealth = 999;
+          let curvanceDebt = 0;
+          let curvanceMarket = '';
+          let curvanceError: string | null = null;
+
           try {
             const hfRes = await fetch(`${API_URL}/api/health-factor/${address}`);
             const hfData = await hfRes.json();
-            const hf = typeof hfData?.healthFactor === 'number' ? hfData.healthFactor : 999;
-            return { address, healthFactor: hf };
+            aaveHealth = typeof hfData?.healthFactor === 'number' ? hfData.healthFactor : 999;
           } catch {
-            return { address, healthFactor: 999 };
+            aaveHealth = 999;
           }
+
+          try {
+            const curvRes = await fetch(`${API_URL}/api/curvance-health/${address}`);
+            const curvData = await curvRes.json();
+            curvanceDebt = typeof curvData?.debtUsd === 'number' ? curvData.debtUsd : 0;
+            curvanceMarket = curvData?.marketName || '';
+            curvanceError = curvData?.error || null;
+          } catch {
+            curvanceError = 'Error consultando Curvance';
+          }
+
+          return { address, aaveHealth, curvanceDebt, curvanceMarket, curvanceError };
         })
       );
       setWallets(walletData);
@@ -127,22 +147,10 @@ export default function App() {
     return 'SEGURO';
   };
 
-  const getRiskDescription = (hf: number) => {
-    if (typeof hf !== 'number' || isNaN(hf)) return '—';
-    if (hf > 100) return 'Sin posicion activa';
-    if (hf < 1.1) return 'Liquidacion inminente';
-    if (hf < 1.5) return 'Cerca de liquidacion';
-    return 'Posicion saludable';
-  };
-
   const formatHF = (hf: number) => {
     if (typeof hf !== 'number' || isNaN(hf)) return '—';
     if (hf > 100) return 'Sin deuda';
     return hf.toFixed(4);
-  };
-
-  const isCritical = (hf: number) => {
-    return typeof hf === 'number' && !isNaN(hf) && hf < 1.1;
   };
 
   return (
@@ -208,110 +216,81 @@ export default function App() {
       </div>
 
       {Array.isArray(wallets) && wallets.map((w) => {
-        const critical = isCritical(w.healthFactor);
-        const riskColor = getRiskColor(w.healthFactor);
+        const riskColor = getRiskColor(w.aaveHealth);
+        const hasCurvanceDebt = w.curvanceDebt > 0;
+        const curvanceColor = hasCurvanceDebt ? '#f59e0b' : '#22c55e';
 
         return (
           <div
             key={w.address}
-            className={critical ? 'critical-pulse' : ''}
             style={{
-              background: `linear-gradient(135deg, ${riskColor}20 0%, ${riskColor}08 100%)`,
-              border: `1.5px solid ${riskColor}`,
+              background: 'linear-gradient(135deg, #14121f 0%, #0d0a1a 100%)',
+              border: `1.5px solid ${hasCurvanceDebt ? curvanceColor : riskColor}`,
               borderRadius: '12px',
               padding: '14px',
               marginBottom: '10px',
             }}
           >
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '10px',
-            }}>
-              <span style={{
-                fontSize: '12px',
-                color: '#e5e5e5',
-                fontFamily: 'monospace',
-                fontWeight: 600,
-              }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <span style={{ fontSize: '12px', color: '#e5e5e5', fontFamily: 'monospace', fontWeight: 600 }}>
                 {w.address?.slice(0, 6) || '????'}...{w.address?.slice(-4) || '????'}
               </span>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}>
-                <span style={{
-                  fontSize: '9px',
-                  fontWeight: 800,
-                  letterSpacing: '1px',
-                  color: riskColor,
-                  padding: '3px 8px',
-                  border: `1.5px solid ${riskColor}`,
-                  borderRadius: '5px',
-                  background: `${riskColor}15`,
-                }}>
-                  {getRiskLabel(w.healthFactor)}
+              <button
+                onClick={() => handleRemoveWallet(w.address)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#666',
+                  fontSize: '20px',
+                  lineHeight: '1',
+                  cursor: 'pointer',
+                  padding: '0',
+                  width: '20px',
+                  height: '20px',
+                }}
+                title="Eliminar"
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ fontSize: '9px', color: '#888', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 600 }}>
+                Aave V3
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: riskColor, fontFamily: 'monospace' }}>
+                  {formatHF(w.aaveHealth)}
                 </span>
-                <button
-                  onClick={() => handleRemoveWallet(w.address)}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#666',
-                    fontSize: '20px',
-                    lineHeight: '1',
-                    cursor: 'pointer',
-                    padding: '0',
-                    width: '20px',
-                    height: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                  title="Eliminar"
-                >
-                  ×
-                </button>
+                <span style={{ fontSize: '9px', fontWeight: 800, color: riskColor, padding: '2px 6px', border: `1px solid ${riskColor}`, borderRadius: '4px' }}>
+                  {getRiskLabel(w.aaveHealth)}
+                </span>
               </div>
             </div>
 
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-end',
-            }}>
-              <div>
-                <div style={{
-                  fontSize: '9px',
-                  color: '#888',
-                  letterSpacing: '1px',
-                  textTransform: 'uppercase',
-                  marginBottom: '4px',
-                  fontWeight: 600,
-                }}>
-                  Health Factor
-                </div>
-                <div style={{
-                  fontSize: '26px',
-                  fontWeight: 800,
-                  color: riskColor,
-                  fontFamily: 'monospace',
-                  lineHeight: '1',
-                }}>
-                  {formatHF(w.healthFactor)}
-                </div>
+            <div>
+              <div style={{ fontSize: '9px', color: '#888', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 600 }}>
+                Curvance
               </div>
-              <div style={{
-                fontSize: '10px',
-                color: riskColor,
-                fontWeight: 700,
-                textAlign: 'right',
-                maxWidth: '100px',
-              }}>
-                {getRiskDescription(w.healthFactor)}
-              </div>
+              {w.curvanceError ? (
+                <div style={{ fontSize: '10px', color: '#ef4444' }}>Error: {w.curvanceError}</div>
+              ) : hasCurvanceDebt ? (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: curvanceColor, fontFamily: 'monospace' }}>
+                      ${w.curvanceDebt.toFixed(2)}
+                    </span>
+                    <span style={{ fontSize: '9px', fontWeight: 800, color: curvanceColor, padding: '2px 6px', border: `1px solid ${curvanceColor}`, borderRadius: '4px' }}>
+                      CON DEUDA
+                    </span>
+                  </div>
+                  {w.curvanceMarket && (
+                    <div style={{ fontSize: '9px', color: '#888' }}>Mercado: {w.curvanceMarket}</div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ fontSize: '11px', color: '#22c55e', fontWeight: 600 }}>Sin posicion activa</div>
+              )}
             </div>
           </div>
         );
