@@ -153,6 +153,10 @@ export default function App() {
     return hf.toFixed(4);
   };
 
+  const isCritical = (hf: number) => {
+    return typeof hf === 'number' && !isNaN(hf) && hf < 1.1;
+  };
+
   return (
     <div style={{
       width: '380px',
@@ -216,6 +220,7 @@ export default function App() {
       </div>
 
       {Array.isArray(wallets) && wallets.map((w) => {
+        const critical = isCritical(w.aaveHealth);
         const riskColor = getRiskColor(w.aaveHealth);
         const hasCurvanceDebt = w.curvanceDebt > 0;
         const curvanceColor = hasCurvanceDebt ? '#f59e0b' : '#22c55e';
@@ -223,9 +228,10 @@ export default function App() {
         return (
           <div
             key={w.address}
+            className={critical ? 'critical-pulse' : ''}
             style={{
               background: 'linear-gradient(135deg, #14121f 0%, #0d0a1a 100%)',
-              border: `1.5px solid ${hasCurvanceDebt ? curvanceColor : riskColor}`,
+              border: `1.5px solid ${critical ? '#ef4444' : (hasCurvanceDebt ? curvanceColor : riskColor)}`,
               borderRadius: '12px',
               padding: '14px',
               marginBottom: '10px',
