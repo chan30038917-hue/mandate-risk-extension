@@ -3,7 +3,6 @@ import { ethers } from 'ethers';
 const PROTOCOL_READER = '0x2677738657F27e1A3591E00AD7E5a78807688C08';
 const RPC_URL = 'https://rpc.monad.xyz';
 
-// Lista de MarketManagers de Curvance en Monad
 const MARKET_MANAGERS = [
   '0xb3E9E0134354cc91b7FB9F9d6C3ab0dE7854BB49',
   '0xE1C24B2E93230FBe33d32Ba38ECA3218284143e2',
@@ -24,6 +23,7 @@ export interface CurvancePosition {
   marketManager: string;
   lFactor: number;
   debt: number;
+  riesgo: 'SEGURO' | 'MEDIO' | 'CRITICO';
 }
 
 export async function getCurvanceHealth(walletAddress: string): Promise<CurvancePosition[]> {
@@ -38,14 +38,25 @@ export async function getCurvanceHealth(walletAddress: string): Promise<Curvance
       const lFactor = result[3];
 
       if (debt > 0n) {
+        const lFactorNum = parseFloat(ethers.formatUnits(lFactor, 18));
+
+        let riesgo: 'SEGURO' | 'MEDIO' | 'CRITICO';
+        if (lFactor === 0n) {
+          riesgo = 'SEGURO';
+        } else if (lFactorNum < 0.5) {
+          riesgo = 'MEDIO';
+        } else {
+          riesgo = 'CRITICO';
+        }
+
         positions.push({
           marketManager,
-          lFactor: parseFloat(ethers.formatUnits(lFactor, 18)),
+          lFactor: lFactorNum,
           debt: parseFloat(ethers.formatUnits(debt, 18)),
+          riesgo,
         });
       }
     } catch (e) {
-      // Sin posicion en este mercado, saltar
       continue;
     }
   }

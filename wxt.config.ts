@@ -5,7 +5,7 @@ export default defineConfig({
     name: 'Mandate Risk Monitor',
     description: 'Monitorea el riesgo de liquidacion en Monad',
     version: '1.0.0',
-    permissions: ['storage'],
+    permissions: ['storage', 'alarms'],
     host_permissions: [
       'https://mandate-risk-bot-production.up.railway.app/*',
     ],
