@@ -8,6 +8,7 @@ interface WalletData {
   aaveHealth: number;
   curvanceDebt: number;
   curvanceMarket: string;
+  curvanceRisk: number;
   curvanceError: string | null;
 }
 
@@ -47,6 +48,7 @@ export default function App() {
           let aaveHealth = 999;
           let curvanceDebt = 0;
           let curvanceMarket = '';
+          let curvanceRisk = 0;
           let curvanceError: string | null = null;
 
           try {
@@ -62,12 +64,13 @@ export default function App() {
             const curvData = await curvRes.json();
             curvanceDebt = typeof curvData?.debtUsd === 'number' ? curvData.debtUsd : 0;
             curvanceMarket = curvData?.marketName || '';
+            curvanceRisk = typeof curvData?.riskLevel === 'number' ? curvData.riskLevel : 0;
             curvanceError = curvData?.error || null;
           } catch {
             curvanceError = 'Error consultando Curvance';
           }
 
-          return { address, aaveHealth, curvanceDebt, curvanceMarket, curvanceError };
+          return { address, aaveHealth, curvanceDebt, curvanceMarket, curvanceRisk, curvanceError };
         })
       );
       setWallets(walletData);
@@ -131,7 +134,7 @@ export default function App() {
     }
   };
 
-  const getRiskColor = (hf: number) => {
+  const getAaveColor = (hf: number) => {
     if (typeof hf !== 'number' || isNaN(hf)) return '#888888';
     if (hf > 100) return '#22c55e';
     if (hf < 1.1) return '#ef4444';
@@ -139,7 +142,7 @@ export default function App() {
     return '#22c55e';
   };
 
-  const getRiskLabel = (hf: number) => {
+  const getAaveLabel = (hf: number) => {
     if (typeof hf !== 'number' || isNaN(hf)) return 'SIN DATOS';
     if (hf > 100) return 'SIN DEUDA';
     if (hf < 1.1) return 'CRITICO';
@@ -147,14 +150,32 @@ export default function App() {
     return 'SEGURO';
   };
 
-  const formatHF = (hf: number) => {
+  const formatAaveHF = (hf: number) => {
     if (typeof hf !== 'number' || isNaN(hf)) return '—';
     if (hf > 100) return 'Sin deuda';
     return hf.toFixed(4);
   };
 
-  const isCritical = (hf: number) => {
+  const getCurvanceColor = (risk: number) => {
+    if (risk === 0) return '#22c55e';
+    if (risk < 0.5) return '#f59e0b';
+    if (risk < 1) return '#ef4444';
+    return '#ef4444';
+  };
+
+  const getCurvanceLabel = (risk: number) => {
+    if (risk === 0) return 'SEGURO';
+    if (risk < 0.5) return 'PRECAUCION';
+    if (risk < 1) return 'CRITICO';
+    return 'LIQUIDACION';
+  };
+
+  const isAaveCritical = (hf: number) => {
     return typeof hf === 'number' && !isNaN(hf) && hf < 1.1;
+  };
+
+  const isCurvanceCritical = (risk: number) => {
+    return typeof risk === 'number' && risk >= 0.5;
   };
 
   return (
@@ -220,18 +241,19 @@ export default function App() {
       </div>
 
       {Array.isArray(wallets) && wallets.map((w) => {
-        const critical = isCritical(w.aaveHealth);
-        const riskColor = getRiskColor(w.aaveHealth);
+        const aaveCritical = isAaveCritical(w.aaveHealth);
+        const curvanceCritical = isCurvanceCritical(w.curvanceRisk);
+        const aaveColor = getAaveColor(w.aaveHealth);
+        const curvanceColor = getCurvanceColor(w.curvanceRisk);
         const hasCurvanceDebt = w.curvanceDebt > 0;
-        const curvanceColor = hasCurvanceDebt ? '#f59e0b' : '#22c55e';
 
         return (
           <div
             key={w.address}
-            className={critical ? 'critical-pulse' : ''}
+            className={aaveCritical || curvanceCritical ? 'critical-pulse' : ''}
             style={{
               background: 'linear-gradient(135deg, #14121f 0%, #0d0a1a 100%)',
-              border: `1.5px solid ${critical ? '#ef4444' : (hasCurvanceDebt ? curvanceColor : riskColor)}`,
+              border: `1.5px solid ${aaveCritical || curvanceCritical ? '#ef4444' : (hasCurvanceDebt ? curvanceColor : aaveColor)}`,
               borderRadius: '12px',
               padding: '14px',
               marginBottom: '10px',
@@ -265,11 +287,11 @@ export default function App() {
                 Aave V3
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: riskColor, fontFamily: 'monospace' }}>
-                  {formatHF(w.aaveHealth)}
+                <span style={{ fontSize: '14px', fontWeight: 700, color: aaveColor, fontFamily: 'monospace' }}>
+                  {formatAaveHF(w.aaveHealth)}
                 </span>
-                <span style={{ fontSize: '9px', fontWeight: 800, color: riskColor, padding: '2px 6px', border: `1px solid ${riskColor}`, borderRadius: '4px' }}>
-                  {getRiskLabel(w.aaveHealth)}
+                <span style={{ fontSize: '9px', fontWeight: 800, color: aaveColor, padding: '2px 6px', border: `1px solid ${aaveColor}`, borderRadius: '4px' }}>
+                  {getAaveLabel(w.aaveHealth)}
                 </span>
               </div>
             </div>
@@ -287,7 +309,7 @@ export default function App() {
                       ${w.curvanceDebt.toFixed(2)}
                     </span>
                     <span style={{ fontSize: '9px', fontWeight: 800, color: curvanceColor, padding: '2px 6px', border: `1px solid ${curvanceColor}`, borderRadius: '4px' }}>
-                      CON DEUDA
+                      {getCurvanceLabel(w.curvanceRisk)}
                     </span>
                   </div>
                   {w.curvanceMarket && (
