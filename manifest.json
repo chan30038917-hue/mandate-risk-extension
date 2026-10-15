@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Mandate Risk Monitor",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Monitorea el riesgo de tus wallets en Aave y Curvance",
   "permissions": [
     "activeTab",

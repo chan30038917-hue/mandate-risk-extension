@@ -20,12 +20,22 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // ─── Estados para Pro ───
+  const [licenseKey, setLicenseKey] = useState('');
+  const [isPro, setIsPro] = useState(false);
+  const [proError, setProError] = useState('');
+  const [proLoading, setProLoading] = useState(false);
+
   useEffect(() => {
-    chrome.storage.local.get(['discordId'], (result) => {
+    chrome.storage.local.get(['discordId', 'licenseKey'], (result) => {
       if (result.discordId && typeof result.discordId === 'string') {
         setDiscordId(result.discordId);
         setSavedDiscordId(result.discordId);
         fetchWallets(result.discordId);
+      }
+      if (result.licenseKey && typeof result.licenseKey === 'string') {
+        setLicenseKey(result.licenseKey);
+        verifyLicense(result.licenseKey);
       }
     });
   }, []);
@@ -134,6 +144,55 @@ export default function App() {
     }
   };
 
+  // ─── Funciones Pro ───
+  const verifyLicense = async (key: string) => {
+    if (!key) return;
+    setProLoading(true);
+    setProError('');
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'CHECK_PRO_ACCESS',
+        licenseKey: key,
+      });
+      if (response === true) {
+        setIsPro(true);
+        chrome.storage.local.set({ licenseKey: key });
+      } else {
+        setIsPro(false);
+        setProError('Licencia inválida o expirada');
+      }
+    } catch {
+      setProError('Error verificando licencia');
+    }
+    setProLoading(false);
+  };
+
+  const handleActivatePro = () => {
+    if (!licenseKey || licenseKey.length < 10) {
+      setProError('Introduce una licencia válida');
+      return;
+    }
+    verifyLicense(licenseKey);
+  };
+
+  const handleBuyPro = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/create-checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'user@example.com' }),
+      });
+      const data = await res.json();
+      if (data.checkout_url) {
+        chrome.tabs.create({ url: data.checkout_url });
+      } else {
+        console.error('No se recibió checkout_url del backend');
+      }
+    } catch (e) {
+      console.error('Error llamando al backend:', e);
+    }
+  };
+
   const getAaveColor = (hf: number) => {
     if (typeof hf !== 'number' || isNaN(hf)) return '#888888';
     if (hf > 100) return '#22c55e';
@@ -158,14 +217,13 @@ export default function App() {
 
   const getCurvanceColor = (risk: number) => {
     if (risk === 0) return '#22c55e';
-    if (risk < 0.5) return '#f59e0b';
-    if (risk < 1) return '#ef4444';
+    if (risk < 0.75) return '#f59e0b';
     return '#ef4444';
   };
 
   const getCurvanceLabel = (risk: number) => {
     if (risk === 0) return 'SEGURO';
-    if (risk < 0.5) return 'PRECAUCION';
+    if (risk < 0.75) return 'PRECAUCION';
     if (risk < 1) return 'CRITICO';
     return 'LIQUIDACION';
   };
@@ -175,7 +233,7 @@ export default function App() {
   };
 
   const isCurvanceCritical = (risk: number) => {
-    return typeof risk === 'number' && risk >= 0.5;
+    return typeof risk === 'number' && risk >= 0.75;
   };
 
   return (
@@ -196,6 +254,104 @@ export default function App() {
         <div style={{ fontSize: '10px', color: '#836EF9', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 600 }}>
           Monad Mainnet
         </div>
+      </div>
+
+      {/* ─── Sección Pro ─── */}
+      <div style={{
+        background: isPro ? 'rgba(34, 197, 94, 0.1)' : 'rgba(131, 110, 249, 0.1)',
+        border: `1px solid ${isPro ? 'rgba(34, 197, 94, 0.4)' : 'rgba(131, 110, 249, 0.3)'}`,
+        borderRadius: '12px',
+        padding: '14px',
+        marginBottom: '20px',
+      }}>
+        <div style={{ fontSize: '11px', fontWeight: 700, marginBottom: '10px', color: isPro ? '#22c55e' : '#836EF9' }}>
+          {isPro ? '✅ PRO ACTIVO' : '⭐ VERSIÓN GRATUITA'}
+        </div>
+
+        {!isPro && (
+          <>
+            <input
+              type="text"
+              placeholder="Pega tu licencia de Dodo"
+              value={licenseKey}
+              onChange={(e) => setLicenseKey(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                background: '#14121f',
+                border: '1px solid rgba(131, 110, 249, 0.3)',
+                borderRadius: '8px',
+                color: '#ffffff',
+                fontSize: '11px',
+                boxSizing: 'border-box',
+                marginBottom: '8px',
+                fontFamily: 'monospace',
+                outline: 'none',
+              }}
+            />
+            {proError && (
+              <div style={{ fontSize: '10px', color: '#ef4444', marginBottom: '8px' }}>
+                {proError}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={handleActivatePro}
+                disabled={proLoading}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  background: 'linear-gradient(135deg, #836EF9 0%, #6b5ce0 100%)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#ffffff',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: proLoading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {proLoading ? '...' : 'Activar Pro'}
+              </button>
+              <button
+                onClick={handleBuyPro}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  background: 'rgba(131, 110, 249, 0.2)',
+                  border: '1px solid #836EF9',
+                  borderRadius: '8px',
+                  color: '#ffffff',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Comprar $5/mes
+              </button>
+            </div>
+          </>
+        )}
+
+        {isPro && (
+          <button
+            onClick={() => {
+              setIsPro(false);
+              setLicenseKey('');
+              chrome.storage.local.remove('licenseKey');
+            }}
+            style={{
+              padding: '8px 12px',
+              background: 'transparent',
+              border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: '6px',
+              color: '#888',
+              fontSize: '10px',
+              cursor: 'pointer',
+            }}
+          >
+            Cerrar sesión Pro
+          </button>
+        )}
       </div>
 
       <div style={{ marginBottom: '20px' }}>
