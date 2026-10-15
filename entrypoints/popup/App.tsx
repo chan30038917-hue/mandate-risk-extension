@@ -179,12 +179,7 @@ export default function App() {
       if (response === true) {
         setIsPro(true);
         setLicenseExpired(false);
-        await chrome.storage.local.set({
-          licenseKey: key,
-          trialStartedAt: Date.now()
-        });
-        setTrialActive(true);
-        setTrialDaysLeft(30);
+        await chrome.storage.local.set({ licenseKey: key });
       } else {
         setIsPro(false);
         setLicenseExpired(true);
