@@ -25,9 +25,12 @@ export default function App() {
   const [isPro, setIsPro] = useState(false);
   const [proError, setProError] = useState('');
   const [proLoading, setProLoading] = useState(false);
+  const [trialActive, setTrialActive] = useState(true);
+  const [trialDaysLeft, setTrialDaysLeft] = useState(30);
+  const [licenseExpired, setLicenseExpired] = useState(false);
 
   useEffect(() => {
-    chrome.storage.local.get(['discordId', 'licenseKey'], (result) => {
+    chrome.storage.local.get(['discordId', 'licenseKey', 'trialStartedAt'], (result) => {
       if (result.discordId && typeof result.discordId === 'string') {
         setDiscordId(result.discordId);
         setSavedDiscordId(result.discordId);
@@ -36,6 +39,15 @@ export default function App() {
       if (result.licenseKey && typeof result.licenseKey === 'string') {
         setLicenseKey(result.licenseKey);
         verifyLicense(result.licenseKey);
+      }
+      // Comprobar el trial
+      chrome.runtime.sendMessage({ type: 'CHECK_TRIAL' }, (response) => {
+        setTrialActive(response === true);
+      });
+      // Calcular días restantes
+      if (result.trialStartedAt) {
+        const daysPassed = (Date.now() - result.trialStartedAt) / (1000 * 60 * 60 * 24);
+        setTrialDaysLeft(Math.max(0, Math.ceil(30 - daysPassed)));
       }
     });
   }, []);
@@ -95,6 +107,10 @@ export default function App() {
       setError('Discord ID invalido');
       return;
     }
+    if (!hasAccess) {
+      setError('Tu licencia ha expirado. Renueva para seguir usando la extensión.');
+      return;
+    }
     setSavedDiscordId(discordId);
     chrome.storage.local.set({ discordId });
     setError('');
@@ -104,6 +120,10 @@ export default function App() {
   const handleAddWallet = async () => {
     if (!savedDiscordId) {
       setError('Primero guarda tu Discord ID');
+      return;
+    }
+    if (!hasAccess) {
+      setError('Tu prueba de 30 días ha expirado. Actualiza a Pro para seguir usando la extensión.');
       return;
     }
     if (!newWallet || !newWallet.startsWith('0x') || newWallet.length !== 42) {
@@ -144,6 +164,8 @@ export default function App() {
     }
   };
 
+  const hasAccess = isPro || trialActive;
+
   // ─── Funciones Pro ───
   const verifyLicense = async (key: string) => {
     if (!key) return;
@@ -156,10 +178,17 @@ export default function App() {
       });
       if (response === true) {
         setIsPro(true);
-        chrome.storage.local.set({ licenseKey: key });
+        setLicenseExpired(false);
+        await chrome.storage.local.set({
+          licenseKey: key,
+          trialStartedAt: Date.now()
+        });
+        setTrialActive(true);
+        setTrialDaysLeft(30);
       } else {
         setIsPro(false);
-        setProError('Licencia inválida o expirada');
+        setLicenseExpired(true);
+        setProError('Licencia inválida o expirada. Renueva para seguir usando Pro.');
       }
     } catch {
       setProError('Error verificando licencia');
@@ -264,8 +293,8 @@ export default function App() {
         padding: '14px',
         marginBottom: '20px',
       }}>
-        <div style={{ fontSize: '11px', fontWeight: 700, marginBottom: '10px', color: isPro ? '#22c55e' : '#836EF9' }}>
-          {isPro ? '✅ PRO ACTIVO' : '⭐ VERSIÓN GRATUITA'}
+        <div style={{ fontSize: '11px', fontWeight: 700, marginBottom: '10px', color: isPro ? '#22c55e' : (trialActive ? '#836EF9' : '#ef4444') }}>
+          {isPro ? '✅ PRO ACTIVO' : (trialActive ? `⭐ PRUEBA GRATIS — ${trialDaysLeft} días restantes` : '🔒 PRUEBA EXPIRADA')}
         </div>
 
         {!isPro && (
@@ -332,11 +361,42 @@ export default function App() {
           </>
         )}
 
+        {licenseExpired && !isPro && (
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.15)',
+            border: '1px solid rgba(239, 68, 68, 0.4)',
+            borderRadius: '8px',
+            padding: '10px',
+            marginTop: '8px',
+          }}>
+            <div style={{ fontSize: '10px', color: '#ef4444', marginBottom: '8px', fontWeight: 600 }}>
+              ⚠️ Tu licencia ha expirado
+            </div>
+            <button
+              onClick={handleBuyPro}
+              style={{
+                width: '100%',
+                padding: '10px',
+                background: 'linear-gradient(135deg, #836EF9 0%, #6b5ce0 100%)',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#ffffff',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Renovar por $5/mes
+            </button>
+          </div>
+        )}
+
         {isPro && (
           <button
             onClick={() => {
               setIsPro(false);
               setLicenseKey('');
+              setLicenseExpired(false);
               chrome.storage.local.remove('licenseKey');
             }}
             style={{

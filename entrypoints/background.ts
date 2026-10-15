@@ -1,4 +1,13 @@
 export default defineBackground(() => {
+  // ─── Registro del trial de 30 días ───
+  chrome.runtime.onInstalled.addListener(async () => {
+    const result = await chrome.storage.local.get('trialStartedAt');
+    if (!result.trialStartedAt) {
+      await chrome.storage.local.set({ trialStartedAt: Date.now() });
+      console.log('Trial de 30 días iniciado');
+    }
+  });
+
   // Actualizar el badge cada 5 minutos
   chrome.alarms.create('checkRisk', { periodInMinutes: 5 });
 
@@ -12,14 +21,14 @@ export default defineBackground(() => {
     }
 
     const hf = result.healthFactor || 999;
-    let color = '#22C55E'; // Verde
+    let color = '#22C55E';
     let text = 'OK';
 
     if (hf < 1.1) {
-      color = '#EF4444'; // Rojo
+      color = '#EF4444';
       text = '!!';
     } else if (hf < 1.5) {
-      color = '#F59E0B'; // Amarillo
+      color = '#F59E0B';
       text = '!';
     }
 
@@ -39,6 +48,13 @@ interface LicenseValidationResponse {
   expires_at?: string;
 }
 
+async function isTrialActive(): Promise<boolean> {
+  const result = await chrome.storage.local.get('trialStartedAt');
+  if (!result.trialStartedAt) return true;
+  const daysPassed = (Date.now() - result.trialStartedAt) / (1000 * 60 * 60 * 24);
+  return daysPassed < 30;
+}
+
 async function checkProAccess(licenseKey: string): Promise<boolean> {
   if (!licenseKey) return false;
 
@@ -56,15 +72,17 @@ async function checkProAccess(licenseKey: string): Promise<boolean> {
     const data: LicenseValidationResponse = await response.json();
     return data.valid === true;
   } catch {
-    // Si falla la red, permitir acceso temporal (grace period)
     return true;
   }
 }
 
-// Exponer la función para que el popup pueda usarla
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'CHECK_PRO_ACCESS') {
     checkProAccess(message.licenseKey).then(sendResponse);
-    return true; // mantener el canal abierto para respuesta asíncrona
+    return true;
+  }
+  if (message.type === 'CHECK_TRIAL') {
+    isTrialActive().then(sendResponse);
+    return true;
   }
 });
