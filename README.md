@@ -6,11 +6,11 @@ Extensión de Chrome para monitorear el riesgo de liquidación en Aave V3 y Curv
 **https://chan30038917-hue.github.io/mandate-risk-extension/**
 
 ## Qué hace
-- Interfaz visual para registrar wallets
-- Muestra el health factor en tiempo real
-- Etiquetas de riesgo: CRÍTICO, PRECAUCIÓN, SEGURO
-- Se conecta con la API del bot para compartir datos
-- Sin custodia, sin permisos, solo lectura
+- Interfaz visual para registrar wallets.
+- Muestra el health factor en tiempo real.
+- Etiquetas de riesgo: CRÍTICO, PRECAUCIÓN, SEGURO.
+- Se conecta con la API del bot para compartir datos.
+- Sin custodia, sin permisos, solo lectura.
 
 ## Precio
 Pago de 5 USD. Incluye código de licencia que desbloquea la versión Pro por límite de 30 días.
@@ -24,10 +24,10 @@ Pago de 5 USD. Incluye código de licencia que desbloquea la versión Pro por l�
 2. En Chrome: ve a `chrome://extensions/`, activa "Modo de desarrollador", haz clic en "Cargar descomprimida" y selecciona la carpeta `.output/chrome-mv3/`
 
 ## Uso
-1. Obtén tu Discord User ID (Ajustes > Avanzado > Modo desarrollador, clic derecho en tu perfil > Copiar ID)
-2. Pega tu Discord User ID en la extensión y guarda
-3. Añade tus wallets (0x...)
-4. Recibe alertas por DM cuando el health factor baje de 1.5
+1. Obtén tu Discord User ID (Ajustes > Avanzado > Modo desarrollador, clic derecho en tu perfil > Copiar ID).
+2. Pega tu Discord User ID en la extensión y guarda.
+3. Añade tus wallets (0x...).
+4. Recibe alertas por DM cuando el health factor baje de 1.5.
 
 ## Estados de riesgo
 | Health Factor | Etiqueta | Color |
@@ -44,9 +44,9 @@ Pago de 5 USD. Incluye código de licencia que desbloquea la versión Pro por l�
 ## API
 La extensión se conecta a la API del bot:
 - URL base: https://mandate-risk-bot-production.up.railway.app
-- `POST /api/register` - Registrar cartera
-- `GET /api/wallets/:discordId` - Listar monederos
-- `GET /api/health-factor/:wallet` - Obtener health factor
+- `POST /api/register` - Registrar cartera.
+- `GET /api/wallets/:discordId` - Listar monederos.
+- `GET /api/health-factor/:wallet` - Obtener health factor.
 
 ## Tecnologías
 - WXT
