@@ -37,10 +37,6 @@ Pago de 5 USD. Incluye código de licencia que desbloquea la versión Pro por l�
 | 1.1 - 1.5 | PRECAUCIÓN | Amarillo |
 | < 1.1 | CRÍTICO | Rojo |
 
-## Red
-- **Monad Mainnet** (Chain ID: 143)
-- RPC: https://rpc.monad.xyz
-
 ## Protocolos soportados
 - Pool Aave V3: `0x69xxx2fe0`
 - Lector del Protocolo Curvance: `0x26xxx8C07`
