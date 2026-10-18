@@ -199,23 +199,11 @@ export default function App() {
     verifyLicense(licenseKey);
   };
 
-  const handleBuyPro = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/create-checkout`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'user@example.com' }),
-      });
-      const data = await res.json();
-      if (data.checkout_url) {
-        chrome.tabs.create({ url: data.checkout_url });
-      } else {
-        console.error('No se recibió checkout_url del backend');
-      }
-    } catch (e) {
-      console.error('Error llamando al backend:', e);
-    }
-  };
+  const handleBuyPro = () => {
+  chrome.tabs.create({
+    url: 'https://mandateriskmonitor.lemonsqueezy.com/checkout/buy/736db0d9-93d5-4203-8e86-6d41bd0ee4fc'
+  });
+};
 
   const getAaveColor = (hf: number) => {
     if (typeof hf !== 'number' || isNaN(hf)) return '#888888';
@@ -296,7 +284,7 @@ export default function App() {
           <>
             <input
               type="text"
-              placeholder="Pega tu licencia de Dodo"
+              placeholder="Pega tu licencia de Lemon Squeezy"
               value={licenseKey}
               onChange={(e) => setLicenseKey(e.target.value)}
               style={{

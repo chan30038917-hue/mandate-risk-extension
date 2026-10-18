@@ -37,15 +37,13 @@ export default defineBackground(() => {
   });
 });
 
-// ─── Dodo Payments: validación de licencia Pro ───
+// ─── Lemon Squeezy (vía bot en Railway): validación de licencia Pro ───
 
-const PRODUCT_ID = 'pdt_0NpndMqzbLZS4SMoC433b';
-const LICENSE_API = 'https://live.dodopayments.com/licenses/validate';
+const API_URL = 'https://mandate-risk-bot-production.up.railway.app';
 
 interface LicenseValidationResponse {
   valid: boolean;
   status?: string;
-  expires_at?: string;
 }
 
 async function isTrialActive(): Promise<boolean> {
@@ -59,12 +57,10 @@ async function checkProAccess(licenseKey: string): Promise<boolean> {
   if (!licenseKey) return false;
 
   try {
-    const response = await fetch(LICENSE_API, {
+    const response = await fetch(`${API_URL}/api/validate-license`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        license_key: licenseKey,
-      }),
+      body: JSON.stringify({ licenseKey }),
     });
 
     if (!response.ok) return false;
@@ -72,7 +68,7 @@ async function checkProAccess(licenseKey: string): Promise<boolean> {
     const data: LicenseValidationResponse = await response.json();
     return data.valid === true;
   } catch {
-    return true;
+    return false;
   }
 }
 
