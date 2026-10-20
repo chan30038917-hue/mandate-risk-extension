@@ -302,7 +302,7 @@ export default function App() {
           <>
             <input
               type="text"
-              placeholder="Pega tu licencia de Lemon Squeezy"
+              placeholder="Pega tu licencia de Dodo Payments"
               value={licenseKey}
               onChange={(e) => setLicenseKey(e.target.value)}
               style={{
