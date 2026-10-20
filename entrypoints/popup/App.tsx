@@ -204,6 +204,11 @@ export default function App() {
     url: 'https://mandateriskmonitor.lemonsqueezy.com/checkout/buy/736db0d9-93d5-4203-8e86-6d41bd0ee4fc'
   });
 };
+  const handleJoinDiscord = () => {
+    chrome.tabs.create({
+      url: 'https://discord.gg/4ZB3AdMYk'
+    });
+  };
 
   const getAaveColor = (hf: number) => {
     if (typeof hf !== 'number' || isNaN(hf)) return '#888888';
@@ -436,6 +441,24 @@ export default function App() {
           }}
         >
           Guardar Discord ID
+        </button>
+
+        <button
+          onClick={handleJoinDiscord}
+          style={{
+            width: '100%',
+            padding: '12px',
+            background: 'rgba(88, 101, 242, 0.2)',
+            border: '1px solid #5865F2',
+            borderRadius: '10px',
+            color: '#ffffff',
+            fontSize: '12px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            marginTop: '8px',
+          }}
+        >
+          Unirse al servidor de Discord
         </button>
       </div>
 
