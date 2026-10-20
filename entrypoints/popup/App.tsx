@@ -217,6 +217,12 @@ export default function App() {
   }
 };
 
+  const handleJoinDiscord = () => {
+    chrome.tabs.create({
+      url: 'https://discord.gg/4ZB3AdMYk'
+    });
+  };
+
   const getAaveColor = (hf: number) => {
     if (typeof hf !== 'number' || isNaN(hf)) return '#888888';
     if (hf > 100) return '#22c55e';
